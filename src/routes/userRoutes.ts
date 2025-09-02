@@ -40,6 +40,8 @@ router
   .put(protect, userController.updateMe)
   .delete(protect, userController.deleteMe);
 
+router.route("/user/top-contributors").get(userController.contributors);
+router.route("/user/:id").get(userController.getUser);
 router.route("/user/check-username").get(userController.checkUsername);
 
 router
@@ -54,7 +56,7 @@ router
   .route("/admin/:id/role")
   .patch(protect, restrictTo("admin"), userController.updateUserRole);
 
-router.route("/user/top-contributors").get(userController.contributors);
+
 
 
 router.post("/user/avatar/:id", upload.single("avatar"), userController.uploadAvatar);

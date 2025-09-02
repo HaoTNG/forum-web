@@ -7,23 +7,58 @@ import User, { IUser} from '../models/userModel';
 
 exports.getAllPost = async (req: Request, res: Response) => {
     try {
-        const posts: IPost[] = await Post.find().populate("author", "_id username").sort({createdAt: -1});
+        const posts: IPost[] = await Post.find()
+            .populate("author", "_id username avatarUrl")
+            .sort({ createdAt: -1 })
+            .limit(10); 
         res.status(200).json(posts);
     } catch (error: any) {
         res.status(400).json({ message: 'Cannot get posts', error: error.message });
+    }
+};
+exports.getLatestPosts = async (req: Request, res: Response) => {
+    try {
+        const posts = await Post.find()
+            .populate("author", "_id username avatarUrl")
+            .sort({ createdAt: -1 })
+            .limit(10)
+            .select("_id title content createdAt author comments likes"); 
+
+        const formatted = posts.map(post => ({
+            _id: post._id,
+            title: post.title,
+            content: post.content.substring(0, 100), 
+            author: post.author,
+            createdAt: post.createdAt,    
+            commentsCount: post.comments.length,
+            likesCount: post.likes.length
+        }));
+
+        res.status(200).json(formatted);
+    } catch (error: any) {
+        res.status(400).json({ message: "Cannot get latest posts", error: error.message });
     }
 };
 
 
 exports.getPostById = async (req: Request, res: Response) => {
     try {
-        const post = await Post.findById(req.params.id).populate("author", "_id username");
+        const post = await Post.findById(req.params.id)
+            .populate("author", "_id username avatarUrl")
+            .populate({
+                path: "comments",
+                populate: { path: "author", select: "_id username avatarUrl" },
+                options: { limit: 20, sort: { createdAt: -1 } } 
+            });
+
         if (!post) return res.status(404).json({ message: "Post not found" });
+
         res.status(200).json(post);
     } catch (error) {
         res.status(500).json({ message: "server error" });
     }
 };
+
 
 export const getPostByUser = async (req: Request, res: Response) => {
   try {
@@ -62,12 +97,18 @@ export const createPost = async (req: Request, res: Response) => {
     });
 
     await post.save();
+
+    await User.findByIdAndUpdate(userId, {
+      $push: { posts: post._id },
+    });
+
     res.status(201).json(post);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Failed to create post" });
   }
 };
+
 
 
 export const updatePost = async (req: Request, res: Response) => {
@@ -301,3 +342,189 @@ exports.deletePostByMod = async (req: Request, res: Response) => {
 };
 
 
+exports.getStats = async (req: Request, res: Response) => {
+  try {
+    const threadsCount = await Post.countDocuments();
+    const messagesCount = await Comment.countDocuments();
+    const membersCount = await User.countDocuments();
+
+    res.json({
+      threads: threadsCount,
+      messages: messagesCount,
+      members: membersCount,
+    });
+  } catch (err: any) {
+    res.status(500).json({ message: "Failed to fetch stats", error: err.message });
+  }
+};
+
+
+
+
+exports.getPopularPosts = async (req: Request, res: Response) => {
+  try {
+    const limit = parseInt(req.query.limit as string) || 10; 
+    const page = parseInt(req.query.page as string) || 1;     
+    const skip = (page - 1) * limit;
+
+    const total = await Post.countDocuments({});
+    const posts = await Post.find({})
+      .sort({ likes: -1, createdAt: -1 })  
+      .skip(skip)
+      .limit(limit)
+      .select("_id title content image likes createdAt author")
+      .populate("author", "_id username avatarUrl");
+
+    res.json({
+      posts,
+      pagination: {
+        total,
+        page,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error: any) {
+    res.status(500).json({ message: "Failed to fetch popular posts", error: error.message });
+  }
+};
+
+
+
+export const getTopicStats = async (req: Request, res: Response) => {
+  try {
+    // 1. Đếm threads
+    const threadStats = await Post.aggregate([
+      { $group: { _id: "$topic", threads: { $sum: 1 } } },
+      { $sort: { threads: -1 } },
+      { $limit: 12 }
+    ]);
+
+    // 2. Đếm messages theo topic
+    const messageStats = await Comment.aggregate([
+      {
+        $lookup: {
+          from: "posts",
+          localField: "post",
+          foreignField: "_id",
+          as: "post"
+        }
+      },
+      { $unwind: "$post" },
+      { $group: { _id: "$post.topic", messages: { $sum: 1 } } }
+    ]);
+
+    // 3. Lấy post mới nhất cho từng topic
+    const latestPosts = await Post.aggregate([
+      { $sort: { createdAt: -1 } }, // sort trước để đảm bảo $first = mới nhất
+      {
+        $group: {
+          _id: "$topic",
+          latestPost: { $first: "$$ROOT" }
+        }
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "latestPost.author",
+          foreignField: "_id",
+          as: "author"
+        }
+      },
+      { $unwind: "$author" },
+      {
+        $project: {
+          _id: 1,
+          "latestPost._id": 1,
+          "latestPost.title": 1,
+          "latestPost.createdAt": 1,
+          "author.username": 1,
+          "author.avatarUrl": 1,
+          "author._id": 1
+        }
+      }
+    ]);
+
+    // 4. Merge tất cả
+    const merged = threadStats.map(stat => {
+      const comments = messageStats.find(c => c._id === stat._id)?.messages || 0;
+      const latest = latestPosts.find(lp => lp._id === stat._id);
+
+      return {
+        topic: stat._id,
+        threads: stat.threads,
+        messages: comments,
+        latestPost: latest
+          ? {
+              id: latest.latestPost._id,
+              title: latest.latestPost.title,
+              createdAt: latest.latestPost.createdAt,
+              author: {
+                username: latest.author.username,
+                avatarUrl: latest.author.avatarUrl,
+                id: latest.author._id
+              }
+            }
+          : null
+      };
+    });
+
+    res.json(merged);
+  } catch (err: any) {
+    res
+      .status(500)
+      .json({ message: "Failed to fetch topic stats", error: err.message });
+  }
+};
+
+
+
+export const getPostsByTopic = async (req: Request, res: Response) => {
+  try {
+    const { topic } = req.params;
+    const posts = await Post.find({ topic })
+      .sort({ createdAt: -1 }) 
+      .limit(20); 
+    res.json(posts);
+  } catch (err) {
+    res.status(500).json({ message: "Error fetching posts", error: err });
+  }
+};
+
+
+const FIXED_TOPICS = ["Announcement", "Discussion", "News", "Knowledge"];
+
+export const getFixedTopicStats = async (req: Request, res: Response) => {
+  try {
+    
+    const threadStats = await Post.aggregate([
+      { $match: { topic: { $in: FIXED_TOPICS } } },
+      { $group: { _id: "$topic", threads: { $sum: 1 } } }
+    ]);
+
+    
+    const messageStats = await Comment.aggregate([
+      {
+        $lookup: {
+          from: "posts",
+          localField: "post",
+          foreignField: "_id",
+          as: "post"
+        }
+      },
+      { $unwind: "$post" },
+      { $match: { "post.topic": { $in: FIXED_TOPICS } } },
+      { $group: { _id: "$post.topic", messages: { $sum: 1 } } }
+    ]);
+
+    
+    const merged = FIXED_TOPICS.map(topic => {
+      const thread = threadStats.find(t => t._id === topic)?.threads || 0;
+      const message = messageStats.find(m => m._id === topic)?.messages || 0;
+      return { topic, threads: thread, messages: message };
+    });
+
+    res.json(merged);
+  } catch (err: any) {
+    res.status(500).json({ message: "Failed to fetch fixed topic stats", error: err.message });
+  }
+};

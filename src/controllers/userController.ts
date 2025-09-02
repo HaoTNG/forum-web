@@ -17,6 +17,22 @@ exports.getMe = async (req: Request, res: Response) =>{
     }
 };
 
+exports.getUser = async (req: Request, res: Response) => {
+  
+  try{
+    const user = await User.findById(req.params.id);
+    if(!user){
+      return res.status(400).json({message: "cannot found user"})
+    }
+    res.status(200).json(user);
+  }catch(error: any){
+    res.status(400).json({
+      message: "failed to fetch user",
+      error: error.message
+    })
+  }
+}
+
 exports.updateMe = async (req: Request, res: Response) => {
     const update = req.body;
 
