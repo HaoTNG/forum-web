@@ -30,7 +30,7 @@ exports.createComment = async (req: Request, res: Response) => {
     await Post.findByIdAndUpdate(postId, { $push: { comments: comment._id } }, { new: true });
     await User.findByIdAndUpdate(userId, { $push: { comments: comment._id } });
 
-    await comment.populate("author", "_id username");
+    await comment.populate("author", "_id username avatarUrl");
     res.status(201).json(comment);
   } catch (error: any) {
     res.status(500).json({

@@ -33,7 +33,7 @@ const postSchema = new Schema<IPost>(
     topic: { type: String, enum: topics, required: true },
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     dislikes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
-    comments: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    comments: [{ type: mongoose.Schema.Types.ObjectId, ref: "Comment" }],
     images: [{ type: String }], 
   },
   { timestamps: true }
