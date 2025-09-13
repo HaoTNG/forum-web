@@ -2,18 +2,18 @@ import express, { Request } from "express";
 import { protect, restrictTo } from "../middlewares/authMiddleware";
 import fs from "fs";
 import path from "path";
-const multer = require("multer");
+import multer, { StorageEngine } from "multer";
 const router = express.Router();
 const userController = require("../controllers/userController");
 
+// ================= Multer config =================
+const uploadDir = "/var/www/uploads/avatars";
 
-const uploadDir = path.join(__dirname, "../../uploads/avatars");
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-
-const storage = multer.diskStorage({
+const storage: StorageEngine = multer.diskStorage({
   destination: (
     req: Request,
     file: Express.Multer.File,
@@ -33,7 +33,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
-
+// ================= Routes =================
 router
   .route("/user/me")
   .get(protect, userController.getMe)
@@ -56,9 +56,12 @@ router
   .route("/admin/:id/role")
   .patch(protect, restrictTo("admin"), userController.updateUserRole);
 
-
-
-
-router.post("/user/avatar/:id", upload.single("avatar"), userController.uploadAvatar);
+// Upload avatar
+router.post(
+  "/user/avatar/:id",
+  protect, 
+  upload.single("avatar"),
+  userController.uploadAvatar
+);
 
 export default router;

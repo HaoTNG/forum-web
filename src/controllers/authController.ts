@@ -99,15 +99,15 @@ export async function login(req: Request, res: Response) {
         
         res.cookie("accessToken", accessToken, {
             httpOnly: true,
-            sameSite: "strict",
-            secure: false,
+            sameSite: "none",
+            secure: true,
             maxAge: 15 * 60 * 1000 // 15m
         });
 
         res.cookie("refreshToken", refreshToken, {
             httpOnly: true,
-            sameSite: "strict",
-            secure: false,
+            sameSite: "none",
+            secure: true,
             maxAge: 7 * 24 * 60 * 60 * 1000 // 7d
         });
         return res.status(200).json({
@@ -153,15 +153,15 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
         await user.save();
         res.cookie("accessToken", newAccessToken , {
             httpOnly: true,
-            sameSite: "strict",
-            secure: false,
+            sameSite: "none",
+            secure: true,
             maxAge: 15 * 60 * 1000 // 15m
         });
 
         res.cookie("refreshToken", newRefreshToken, {
             httpOnly: true,
-            sameSite: "strict",
-            secure: false,
+            sameSite: "none",
+            secure: true,
             maxAge: 7 * 24 * 60 * 60 * 1000 // 7d
         });
 

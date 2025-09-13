@@ -84,7 +84,7 @@ export const createPost = async (req: Request, res: Response) => {
     let images: string[] = [];
     if (req.files && Array.isArray(req.files)) {
       images = (req.files as Express.Multer.File[]).map(
-        (file) => `${req.protocol}://${req.get("host")}/uploads/posts/${file.filename}`
+        (file) => `/uploads/posts/${file.filename}`
       );
     }
 
