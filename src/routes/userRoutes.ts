@@ -7,7 +7,7 @@ const router = express.Router();
 const userController = require("../controllers/userController");
 
 // ================= Multer config =================
-const uploadDir = "/var/www/uploads/avatars";
+const uploadDir = "/apps/uploads/avatars";
 
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
