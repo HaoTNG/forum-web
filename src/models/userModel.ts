@@ -12,6 +12,7 @@ export interface IUser extends Document {
   refreshToken: string | null;
   posts: mongoose.Types.ObjectId[];     // mảng post ids
   comments: mongoose.Types.ObjectId[];  // mảng comment ids
+  groups: mongoose.Types.ObjectId[];    // mảng group ids
   score: number;
   createdAt: Date;
   updatedAt: Date;
@@ -30,16 +31,14 @@ const userSchema = new Schema<IUser>(
     refreshToken: { type: String, default: null },
     posts: [{ type: Schema.Types.ObjectId, ref: "Post" }],       // array of post ids
     comments: [{ type: Schema.Types.ObjectId, ref: "Comment" }], // array of comment ids
+    groups: [{type: Schema.Types.ObjectId, ref: "Group" }],    // array of group ids
     score: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
 
 
-const followSchema = new Schema({
-  follower: {type: Schema.Types.ObjectId, ref: 'User', required: true},
-  following: {type: Schema.Types.ObjectId, ref: 'User', required: true},
-}, {timestamps: true});
+
 
 // Hash password trước khi save
 userSchema.pre<IUser>("save", async function (next) {
@@ -57,4 +56,3 @@ userSchema.methods.comparePassword = async function (
 };
 
 export default mongoose.model<IUser>("User", userSchema);
-export const Follow = mongoose.model("Follow", followSchema);
