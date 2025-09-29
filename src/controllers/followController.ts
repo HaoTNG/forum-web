@@ -3,6 +3,29 @@ import User from '../models/userModel';
 import {Follow} from '../models/followModel';
 
 
+exports.getFollowerCount = async (req: Request, res: Response) =>{
+    try{
+        const {id} = req.params;
+        const followerCount = await Follow.countDocuments({folloing: id});
+        res.status(200).json(followerCount);
+    }catch(err: any){
+        res.status(500).json({
+            error: err,
+            message: "server error"});
+    }
+}
+
+exports.getFollowingCount = async (req: Request, res: Response) =>{
+    try{
+        const {id} = req.params;
+        const followingCount = await Follow.countDocuments({follower: id});
+        res.status(200).json(followingCount);
+    }catch(err:any){
+        res.status(500).json({
+            error: err,
+            message: "server error"});
+    }
+}
 exports.followUser = async (req: Request, res: Response) => {
     try{
         const  followerId = (req as any).user.id;
