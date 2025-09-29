@@ -35,6 +35,12 @@ const userSchema = new Schema<IUser>(
   { timestamps: true }
 );
 
+
+const followSchema = new Schema({
+  follower: {type: Schema.Types.ObjectId, ref: 'User', required: true},
+  following: {type: Schema.Types.ObjectId, ref: 'User', required: true},
+}, {timestamps: true});
+
 // Hash password trước khi save
 userSchema.pre<IUser>("save", async function (next) {
   if (!this.isModified("password")) return next();
@@ -51,3 +57,4 @@ userSchema.methods.comparePassword = async function (
 };
 
 export default mongoose.model<IUser>("User", userSchema);
+export const Follow = mongoose.model("Follow", followSchema);
