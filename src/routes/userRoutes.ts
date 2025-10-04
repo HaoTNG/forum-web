@@ -31,6 +31,31 @@ const storage: StorageEngine = multer.diskStorage({
   },
 });
 
+
+// Upload banner
+const bannerUploadDir = "/apps/uploads/banners";
+
+if (!fs.existsSync(bannerUploadDir)) {
+  fs.mkdirSync(bannerUploadDir, { recursive: true });
+}
+
+const bannerStorage: StorageEngine = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, bannerUploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  },
+});
+
+const uploadBanner = multer({ storage: bannerStorage });
+
+
+
+
+
+
 const upload = multer({ storage });
 
 // ================= Routes =================
@@ -62,6 +87,13 @@ router.post(
   protect, 
   upload.single("avatar"),
   userController.uploadAvatar
+);
+//Upload banner
+router.post(
+  "/user/banner/:id",
+  protect,
+  uploadBanner.single("banner"),
+  userController.uploadBanner
 );
 
 export default router;

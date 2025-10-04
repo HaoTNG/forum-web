@@ -197,6 +197,7 @@ export const logout = async (req: Request, res: Response) => {
 };
 
 
+// controllers/authController.ts
 export const getMe = async (req: Request, res: Response) => {
   try {
     const token = req.cookies?.accessToken;
@@ -207,14 +208,14 @@ export const getMe = async (req: Request, res: Response) => {
       role: string;
     };
 
-    // Lấy user, bỏ password và refreshToken
     const user = await User.findById(payload.id)
-      .select("-password -refreshToken -__v"); 
+      .select("_id username name avatarUrl role"); // chỉ lấy cần thiết
     if (!user) return res.status(404).json({ message: "user not found" });
 
-    return res.json(user); 
+    return res.json(user);
   } catch (err) {
     return res.status(401).json({ message: "invalid or expired token" });
   }
 };
+
 

@@ -197,3 +197,29 @@ exports.uploadAvatar = async (req: Request, res: Response) => {
     res.status(500).json({ message: "Upload avatar failed" });
   }
 };
+
+
+exports.uploadBanner = async (req: Request, res: Response) => {
+  try {
+    const file = req.file as Express.Multer.File;
+    if (!file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    const userId = req.params.id;
+    const bannerUrl = `/uploads/banners/${file.filename}`;
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { bannerUrl },
+      { new: true }
+    );
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.json(user);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Upload banner failed" });
+  }
+};

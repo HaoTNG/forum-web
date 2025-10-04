@@ -7,6 +7,7 @@ export interface IUser extends Document {
   password: string;
   name?: string;
   avatarUrl: string;
+  bannerUrl: string;
   role: "user" | "moderator" | "admin";
   description: string;
   refreshToken: string | null;
@@ -26,6 +27,7 @@ const userSchema = new Schema<IUser>(
     password: { type: String, required: true },
     name: { type: String },
     avatarUrl: { type: String, default: "/default-avatar.png" },
+    bannerUrl: { type: String, default: "/default-banner.png" },
     role: { type: String, enum: ["user", "moderator", "admin"], default: "user" },
     description: { type: String, default: "" },
     refreshToken: { type: String, default: null },
