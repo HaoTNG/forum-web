@@ -7,8 +7,11 @@ export interface IGroup extends Document {
   members: mongoose.Types.ObjectId[];
   posts: mongoose.Types.ObjectId[];
   memberCount: number;   // 👈 thêm field này
+  avatarUrl: string;
+  bannerUrl: string;
   createdAt: Date;
   updatedAt: Date;
+  
 }
 
 const groupSchema = new Schema<IGroup>(
@@ -19,6 +22,8 @@ const groupSchema = new Schema<IGroup>(
     members: [{ type: Schema.Types.ObjectId, ref: "User" }],
     posts: [{ type: Schema.Types.ObjectId, ref: "Post" }],
     memberCount: { type: Number, default: 1 }, // 👈 luôn >= 1
+    avatarUrl: { type: String, default: "/default-group-avatar.png" },
+    bannerUrl: { type: String, default: "/default-group-banner.png" },
   },
   { timestamps: true }
 );

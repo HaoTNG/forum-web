@@ -7,41 +7,19 @@ const router = express.Router();
 const userController = require("../controllers/userController");
 
 // ================= Multer config =================
-const uploadDir = "/apps/uploads/avatars";
+const avatarDir = "/apps/uploads/avatars";
+const bannerDir = "/apps/uploads/banners";
 
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
-
-const storage: StorageEngine = multer.diskStorage({
-  destination: (
-    req: Request,
-    file: Express.Multer.File,
-    cb: (error: Error | null, destination: string) => void
-  ) => {
-    cb(null, uploadDir);
-  },
-  filename: (
-    req: Request,
-    file: Express.Multer.File,
-    cb: (error: Error | null, filename: string) => void
-  ) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  },
+// Tạo folder nếu chưa tồn tại
+[avatarDir, bannerDir].forEach((dir) => {
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 });
 
-
-// Upload banner
-const bannerUploadDir = "/apps/uploads/banners";
-
-if (!fs.existsSync(bannerUploadDir)) {
-  fs.mkdirSync(bannerUploadDir, { recursive: true });
-}
-
-const bannerStorage: StorageEngine = multer.diskStorage({
+// Cấu hình Multer
+const storage: StorageEngine = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, bannerUploadDir);
+    const isBanner = file.fieldname === "banner";
+    cb(null, isBanner ? bannerDir : avatarDir);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
@@ -49,14 +27,7 @@ const bannerStorage: StorageEngine = multer.diskStorage({
   },
 });
 
-const uploadBanner = multer({ storage: bannerStorage });
-
-
-
-
-
-
-const upload = multer({ storage });
+export const upload = multer({ storage });
 
 // ================= Routes =================
 router
@@ -92,7 +63,7 @@ router.post(
 router.post(
   "/user/banner/:id",
   protect,
-  uploadBanner.single("banner"),
+  upload.single("banner"),
   userController.uploadBanner
 );
 

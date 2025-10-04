@@ -4,7 +4,8 @@ import Comment from "../models/commentModel";
 import { Request, Response } from "express";
 import { readdirSync } from "fs";
 import { Multer } from "multer"; 
-
+import fs from "fs";
+import path from "path";
 exports.getMe = async (req: Request, res: Response) =>{
     try{
         const user = await User.findById((req as Request &{user? : IUser}).user?._id).select("-password");
@@ -172,24 +173,27 @@ exports.checkUsername = async (req: Request, res: Response) => {
 };
 
 
-exports.uploadAvatar = async (req: Request, res: Response) => {
+export const uploadAvatar = async (req: Request, res: Response) => {
   try {
-    const file = req.file as Express.Multer.File; 
-    if (!file) {
-      return res.status(400).json({ message: "No file uploaded" });
-    }
+    const file = req.file as Express.Multer.File;
+    if (!file) return res.status(400).json({ message: "No file uploaded" });
 
     const userId = req.params.id;
-    const avatarUrl = `/uploads/avatars/${file.filename}`;
+    const newAvatarUrl = `/uploads/avatars/${file.filename}`;
 
-    // update user
-    const user = await User.findByIdAndUpdate(
-      userId,
-      { avatarUrl },
-      { new: true }
-    );
-
+    // Lấy user hiện tại
+    const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Xoá avatar cũ nếu có
+    if (user.avatarUrl) {
+      const oldPath = path.join("/apps", user.avatarUrl);
+      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+    }
+
+    // Cập nhật DB
+    user.avatarUrl = newAvatarUrl;
+    await user.save();
 
     res.json(user);
   } catch (err) {
@@ -199,23 +203,26 @@ exports.uploadAvatar = async (req: Request, res: Response) => {
 };
 
 
-exports.uploadBanner = async (req: Request, res: Response) => {
+// 🧱 Upload Banner
+export const uploadBanner = async (req: Request, res: Response) => {
   try {
     const file = req.file as Express.Multer.File;
-    if (!file) {
-      return res.status(400).json({ message: "No file uploaded" });
-    }
+    if (!file) return res.status(400).json({ message: "No file uploaded" });
 
     const userId = req.params.id;
-    const bannerUrl = `/uploads/banners/${file.filename}`;
+    const newBannerUrl = `/uploads/banners/${file.filename}`;
 
-    const user = await User.findByIdAndUpdate(
-      userId,
-      { bannerUrl },
-      { new: true }
-    );
-
+    const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Xoá banner cũ nếu có
+    if (user.bannerUrl) {
+      const oldPath = path.join("/apps", user.bannerUrl);
+      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+    }
+
+    user.bannerUrl = newBannerUrl;
+    await user.save();
 
     res.json(user);
   } catch (err) {

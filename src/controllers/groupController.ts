@@ -3,7 +3,8 @@ import {Group} from "../models/groupModel";
 import User, {IUser} from "../models/userModel";
 //import {Post} from "../models/postModel";
 import mongoose from "mongoose";
-
+import fs from "fs";
+import path from "path";
 exports.createGroup = async (req: Request, res: Response) => {
     try{
         const { name, description} = req.body;
@@ -26,7 +27,25 @@ exports.createGroup = async (req: Request, res: Response) => {
     }
 }
 
+export const updateGroup = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { name, description } = req.body;
 
+    const updated = await Group.findByIdAndUpdate(
+      id,
+      { name, description },
+      { new: true, runValidators: true }
+    );
+
+    if (!updated) return res.status(404).json({ message: "Group not found" });
+
+    res.json(updated);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Update group failed" });
+  }
+};
 export const joinGroup = async (req: Request, res: Response) => {
   try {
     const userId = (req as any).user.id; // middleware auth đã decode user id
@@ -170,5 +189,73 @@ export const getGroupsByUserId = async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error(err);
     return res.status(500).json({ message: "Server error" });
+  }
+};
+function deleteOldFile(filePath: string) {
+  try {
+    if (!filePath) return;
+
+    // loại bỏ prefix "/" nếu có
+    const relativePath = filePath.startsWith("/") ? filePath.slice(1) : filePath;
+    const absolutePath = path.join("/apps", relativePath);
+
+    if (fs.existsSync(absolutePath)) {
+      fs.unlinkSync(absolutePath);
+      console.log(" Deleted old file:", absolutePath);
+    }
+  } catch (err: any) {
+    console.warn("cant delete old file", err.message);
+  }
+}
+export const uploadBanner = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const file = req.file as Express.Multer.File;
+
+    if (!file) return res.status(400).json({ message: "No banner file uploaded" });
+
+    const group = await Group.findById(id);
+    if (!group) return res.status(404).json({ message: "Group not found" });
+
+    // Xóa banner cũ nếu có
+    if (group.bannerUrl && !group.bannerUrl.includes("default-group-banner.png")) {
+      deleteOldFile(group.bannerUrl);
+    }
+
+    const bannerUrl = `/uploads/groups/banners/${file.filename}`;
+    group.bannerUrl = bannerUrl;
+    await group.save();
+
+    res.json(group);
+  } catch (err) {
+    console.error("Upload banner failed:", err);
+    res.status(500).json({ message: "Upload banner failed" });
+  }
+};
+
+// ✅ Upload avatar
+export const uploadAvatar = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const file = req.file as Express.Multer.File;
+
+    if (!file) return res.status(400).json({ message: "No avatar file uploaded" });
+
+    const group = await Group.findById(id);
+    if (!group) return res.status(404).json({ message: "Group not found" });
+
+    // Xóa avatar cũ nếu có
+    if (group.avatarUrl && !group.avatarUrl.includes("default-group-avatar.png")) {
+      deleteOldFile(group.avatarUrl);
+    }
+
+    const avatarUrl = `/uploads/groups/avatars/${file.filename}`;
+    group.avatarUrl = avatarUrl;
+    await group.save();
+
+    res.json(group);
+  } catch (err) {
+    console.error("Upload avatar failed:", err);
+    res.status(500).json({ message: "Upload avatar failed" });
   }
 };
