@@ -1,4 +1,5 @@
 import express, { Application } from 'express';
+import http from 'http';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -7,10 +8,13 @@ import { errorHandler } from './middlewares/errorMiddleware';
 import morgan from 'morgan';
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import { setupSocket } from './socket';
 
 dotenv.config();
 
 const app: Application = express();
+const server = http.createServer(app);
+
 app.use(express.json());
 app.use(cookieParser()); 
 
@@ -20,7 +24,7 @@ const NGROK_URL = process.env.NGROK_URL as string;
 const allowedOrigins = [
   FE_PORTAL_URL,
   NGROK_URL
-].filter(Boolean); // tránh null/undefined
+].filter(Boolean); 
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -35,9 +39,7 @@ app.use(cors({
   credentials: true,
 }));
 
-// Serve uploads folder
-//app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
-
+setupSocket(server);
 connectDB();
 app.use(morgan(':method :url :status - :response-time ms'));
 app.use(errorHandler);

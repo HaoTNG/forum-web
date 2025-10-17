@@ -4,8 +4,7 @@ import authRoutes from "./routes/authRoutes";
 import userRoutes from "./routes/userRoutes";
 import commentRoutes from "./routes/commentRoutes";
 import followRoutes from "./routes/followRoutes";
-import groupRoutes from "./routes/groupRoutes";
-app.use('/api', postRoutes, authRoutes, userRoutes, commentRoutes, followRoutes, groupRoutes );
+app.use('/api', postRoutes, authRoutes, userRoutes, commentRoutes, followRoutes);
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 5000;
 

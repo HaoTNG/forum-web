@@ -172,61 +172,72 @@ exports.checkUsername = async (req: Request, res: Response) => {
   }
 };
 
+function deleteOldFile(filePath: string) {
+  try {
+    if (!filePath) return;
 
+    // loại bỏ prefix "/" nếu có
+    const relativePath = filePath.startsWith("/") ? filePath.slice(1) : filePath;
+    const absolutePath = path.join("/apps", relativePath);
+
+    if (fs.existsSync(absolutePath)) {
+      fs.unlinkSync(absolutePath);
+      console.log(" Deleted old file:", absolutePath);
+    }
+  } catch (err: any) {
+    console.warn(" Cannot delete old file:", err.message);
+  }
+}
 export const uploadAvatar = async (req: Request, res: Response) => {
   try {
+    const { id } = req.params;
     const file = req.file as Express.Multer.File;
-    if (!file) return res.status(400).json({ message: "No file uploaded" });
 
-    const userId = req.params.id;
-    const newAvatarUrl = `/uploads/avatars/${file.filename}`;
+    if (!file) return res.status(400).json({ message: "No avatar file uploaded" });
 
-    // Lấy user hiện tại
-    const user = await User.findById(userId);
+    const user = await User.findById(id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // Xoá avatar cũ nếu có
-    if (user.avatarUrl) {
-      const oldPath = path.join("/apps", user.avatarUrl);
-      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+    // 🔥 Xóa avatar cũ nếu có (trừ file default)
+    if (user.avatarUrl && !user.avatarUrl.includes("default-user-avatar.png")) {
+      deleteOldFile(user.avatarUrl);
     }
 
-    // Cập nhật DB
-    user.avatarUrl = newAvatarUrl;
+    const avatarUrl = `/uploads/avatars/${file.filename}`;
+    user.avatarUrl = avatarUrl;
     await user.save();
 
     res.json(user);
   } catch (err) {
-    console.error(err);
+    console.error("❌ Upload avatar failed:", err);
     res.status(500).json({ message: "Upload avatar failed" });
   }
 };
 
 
-// 🧱 Upload Banner
+
 export const uploadBanner = async (req: Request, res: Response) => {
   try {
+    const { id } = req.params;
     const file = req.file as Express.Multer.File;
-    if (!file) return res.status(400).json({ message: "No file uploaded" });
 
-    const userId = req.params.id;
-    const newBannerUrl = `/uploads/banners/${file.filename}`;
+    if (!file) return res.status(400).json({ message: "No banner file uploaded" });
 
-    const user = await User.findById(userId);
+    const user = await User.findById(id);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // Xoá banner cũ nếu có
-    if (user.bannerUrl) {
-      const oldPath = path.join("/apps", user.bannerUrl);
-      if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+    // 🔥 Xóa banner cũ nếu có (trừ file default)
+    if (user.bannerUrl && !user.bannerUrl.includes("default-user-banner.png")) {
+      deleteOldFile(user.bannerUrl);
     }
 
-    user.bannerUrl = newBannerUrl;
+    const bannerUrl = `/uploads/banners/${file.filename}`;
+    user.bannerUrl = bannerUrl;
     await user.save();
 
     res.json(user);
   } catch (err) {
-    console.error(err);
+    console.error("❌ Upload banner failed:", err);
     res.status(500).json({ message: "Upload banner failed" });
   }
 };

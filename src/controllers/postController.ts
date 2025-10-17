@@ -22,7 +22,7 @@ exports.getLatestPosts = async (req: Request, res: Response) => {
             .populate("author", "_id username avatarUrl")
             .sort({ createdAt: -1 })
             .limit(10)
-            .select("_id title content createdAt author comments likes"); 
+            .select("_id title content createdAt author comments likes dislikes images"); 
 
         const formatted = posts.map(post => ({
             _id: post._id,
@@ -31,7 +31,9 @@ exports.getLatestPosts = async (req: Request, res: Response) => {
             author: post.author,
             createdAt: post.createdAt,    
             commentsCount: post.comments.length,
-            likesCount: post.likes.length
+            likesCount: post.likes.length,
+            dislikesCount: post.dislikes.length,
+            images: post.images
         }));
 
         res.status(200).json(formatted);
